@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:acceptance": "cucumber-js"
+    "test:acceptance": "vitest run --reporter=verbose src/acceptance/",
+    "db:reset": "rm -f \"$HOME/Library/Application Support/com.workplate.app/workplate.db\" && echo 'Database deleted. Seed data will be recreated on next launch.'"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

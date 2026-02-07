@@ -96,6 +96,8 @@ export function Backlog() {
         onReorder={reorderTask}
         onEdit={handleEdit}
         onDelete={deleteTask}
+        onMove={handleMoveToPlate}
+        moveLabel="Move to Plate"
         emptyMessage="Backlog is empty."
         listId="backlog"
       />

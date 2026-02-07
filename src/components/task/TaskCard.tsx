@@ -12,10 +12,12 @@ interface TaskCardProps {
   task: Task;
   onEdit?: (task: Task) => void;
   onDelete?: (id: string) => void;
+  onMove?: (task: Task) => void;
+  moveLabel?: string;
   dragHandleProps?: Record<string, unknown>;
 }
 
-export function TaskCard({ task, onEdit, onDelete, dragHandleProps }: TaskCardProps) {
+export function TaskCard({ task, onEdit, onDelete, onMove, moveLabel, dragHandleProps }: TaskCardProps) {
   return (
     <div
       data-testid={`task-card-${task.id}`}
@@ -78,6 +80,16 @@ export function TaskCard({ task, onEdit, onDelete, dragHandleProps }: TaskCardPr
           </div>
         </div>
         <div className="flex gap-1 shrink-0">
+          {onMove && (
+            <button
+              onClick={() => onMove(task)}
+              className="text-text-muted hover:text-plate p-1 text-xs"
+              aria-label={`${moveLabel ?? "Move"} ${task.title}`}
+              title={moveLabel}
+            >
+              {task.status === "plate" ? "→" : "←"}
+            </button>
+          )}
           {onEdit && (
             <button
               onClick={() => onEdit(task)}

@@ -7,7 +7,7 @@ import { TaskFilters } from "../components/task/TaskFilters";
 import type { Task, CreateTaskInput, UpdateTaskInput } from "../types/task";
 
 export function MyPlate() {
-  const { tasks, loading, addTask, updateTask, deleteTask, reorderTask } = useTasks({ status: "plate" });
+  const { tasks, loading, addTask, updateTask, deleteTask, reorderTask, moveTask } = useTasks({ status: "plate" });
   const { filters, showAddForm, setShowAddForm, editingTaskId, setEditingTaskId } = useAppStore();
 
   const filteredTasks = useMemo(() => {
@@ -89,6 +89,8 @@ export function MyPlate() {
         onReorder={reorderTask}
         onEdit={handleEdit}
         onDelete={deleteTask}
+        onMove={(task) => moveTask(task.id, "backlog", 0)}
+        moveLabel="Move to Backlog"
         emptyMessage="Your plate is empty. Add a task to get started!"
         listId="plate"
       />

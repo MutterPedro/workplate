@@ -87,6 +87,10 @@ export class MockTaskRepository implements TaskRepository {
     return updated;
   }
 
+  async seed(): Promise<void> {
+    // No-op for mock — tests set up their own data
+  }
+
   clear(): void {
     this.tasks.clear();
   }

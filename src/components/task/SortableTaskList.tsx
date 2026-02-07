@@ -21,9 +21,11 @@ interface SortableTaskItemProps {
   task: Task;
   onEdit?: (task: Task) => void;
   onDelete?: (id: string) => void;
+  onMove?: (task: Task) => void;
+  moveLabel?: string;
 }
 
-function SortableTaskItem({ task, onEdit, onDelete }: SortableTaskItemProps) {
+function SortableTaskItem({ task, onEdit, onDelete, onMove, moveLabel }: SortableTaskItemProps) {
   const {
     attributes,
     listeners,
@@ -45,6 +47,8 @@ function SortableTaskItem({ task, onEdit, onDelete }: SortableTaskItemProps) {
         task={task}
         onEdit={onEdit}
         onDelete={onDelete}
+        onMove={onMove}
+        moveLabel={moveLabel}
         dragHandleProps={listeners}
       />
     </div>
@@ -56,6 +60,8 @@ interface SortableTaskListProps {
   onReorder: (taskId: string, newIndex: number) => void;
   onEdit?: (task: Task) => void;
   onDelete?: (id: string) => void;
+  onMove?: (task: Task) => void;
+  moveLabel?: string;
   emptyMessage?: string;
   listId: string;
 }
@@ -65,6 +71,8 @@ export function SortableTaskList({
   onReorder,
   onEdit,
   onDelete,
+  onMove,
+  moveLabel,
   emptyMessage = "No tasks",
   listId,
 }: SortableTaskListProps) {
@@ -104,6 +112,8 @@ export function SortableTaskList({
               task={task}
               onEdit={onEdit}
               onDelete={onDelete}
+              onMove={onMove}
+              moveLabel={moveLabel}
             />
           ))}
         </div>

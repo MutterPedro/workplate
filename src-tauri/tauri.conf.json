@@ -25,9 +25,7 @@
   },
   "plugins": {
     "sql": {
-      "preload": {
-        "db": "sqlite:workplate.db"
-      }
+      "preload": ["sqlite:workplate.db"]
     }
   }
 }
