@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicosalm/tauri-schema/refs/heads/main/tauri.conf.json",
+  "productName": "WorkPlate",
+  "version": "0.1.0",
+  "identifier": "com.workplate.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "WorkPlate",
+        "width": 1100,
+        "height": 750,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "sql": {
+      "preload": {
+        "db": "sqlite:workplate.db"
+      }
+    }
+  }
+}
