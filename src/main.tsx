@@ -4,16 +4,21 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { RepositoryProvider } from "./services/repository-context";
 import { TauriTaskRepository } from "./services/task-repository";
+import { CalendarProvider } from "./services/calendar-context";
+import { TauriCalendarService } from "./services/calendar-service";
 import "./styles.css";
 
 const repo = new TauriTaskRepository();
+const calendarService = new TauriCalendarService();
 
 repo.seed().then(() => {
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
       <BrowserRouter>
         <RepositoryProvider repository={repo}>
-          <App />
+          <CalendarProvider service={calendarService}>
+            <App />
+          </CalendarProvider>
         </RepositoryProvider>
       </BrowserRouter>
     </React.StrictMode>,
@@ -25,7 +30,9 @@ repo.seed().then(() => {
     <React.StrictMode>
       <BrowserRouter>
         <RepositoryProvider repository={repo}>
-          <App />
+          <CalendarProvider service={calendarService}>
+            <App />
+          </CalendarProvider>
         </RepositoryProvider>
       </BrowserRouter>
     </React.StrictMode>,
