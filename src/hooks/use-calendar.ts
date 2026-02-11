@@ -15,7 +15,7 @@ interface UseCalendarResult {
   refresh: () => Promise<void>;
 }
 
-export function useCalendar(selectedDate?: string): UseCalendarResult {
+export function useCalendar(selectedDate?: string, workHours?: { workStart: string; workEnd: string }): UseCalendarResult {
   const service = useCalendarService();
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -37,12 +37,12 @@ export function useCalendar(selectedDate?: string): UseCalendarResult {
       const dateStr = selectedDate ?? format(new Date(), "yyyy-MM-dd");
       const todayEvents = await service.fetchTodayEvents(activeTokens.accessToken);
       setEvents(todayEvents);
-      setTimeBlocks(computeTimeBlocks(todayEvents, dateStr));
+      setTimeBlocks(computeTimeBlocks(todayEvents, dateStr, workHours));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to fetch events");
     }
-  }, [service, selectedDate]);
+  }, [service, selectedDate, workHours]);
 
   const initialize = useCallback(async () => {
     try {

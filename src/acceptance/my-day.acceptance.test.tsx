@@ -213,39 +213,7 @@ describe("Feature: My Day", () => {
     });
   });
 
-  describe("Scenario: Settings for working hours and pomodoro", () => {
-    it("allows configuring working hours and pomodoro duration", async () => {
-      const user = userEvent.setup();
-      await service.saveTokens({
-        accessToken: "token",
-        refreshToken: "refresh",
-        expiresAt: Date.now() + 3600_000,
-      });
-      service.setMockEvents([]);
-
-      renderMyDay(service);
-
-      // Should have a settings toggle/button
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: /settings/i })).toBeInTheDocument();
-      });
-
-      // Open settings
-      await user.click(screen.getByRole("button", { name: /settings/i }));
-
-      // Should show working hours, pomodoro duration, and rest duration fields
-      await waitFor(() => {
-        expect(screen.getByLabelText(/work start/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/work end/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/pomodoro.*duration/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/rest.*duration/i)).toBeInTheDocument();
-      });
-
-      // Defaults should be reasonable
-      expect(screen.getByLabelText(/pomodoro.*duration/i)).toHaveValue(30);
-      expect(screen.getByLabelText(/rest.*duration/i)).toHaveValue(5);
-    });
-  });
+  // Settings link has moved to the sidebar — see settings-sidebar.acceptance.test.tsx
 
   describe("Scenario: Pomodoro blocks between meetings", () => {
     it("shows pomodoro blocks fitted into free time between meetings", async () => {
@@ -333,7 +301,7 @@ describe("Feature: My Day", () => {
   });
 
   describe("Scenario: Events display their calendar color", () => {
-    it("event blocks show a colored left border from event.color", async () => {
+    it("event blocks show a colored left border from event.color on the inner element", async () => {
       await service.saveTokens({
         accessToken: "token",
         refreshToken: "refresh",
@@ -346,14 +314,14 @@ describe("Feature: My Day", () => {
       renderMyDay(service);
 
       await waitFor(() => {
-        const timeBlock = screen.getAllByTestId("time-block").find((el) => el.textContent?.includes("Colored meeting"));
-        expect(timeBlock).toBeDefined();
-        // jsdom converts hex to rgb
-        expect(timeBlock!.style.borderLeftColor).toBe("rgb(121, 134, 203)");
+        // The color should be on the inner EventBlock, not the wrapper
+        const eventEl = screen.getByText("Colored meeting").closest("[style]");
+        expect(eventEl).toBeDefined();
+        expect(eventEl!.getAttribute("style")).toContain("border-left-color");
       });
     });
 
-    it("events without color get a deterministic hash-derived color", async () => {
+    it("events without color get a deterministic hash-derived color on the inner element", async () => {
       await service.saveTokens({
         accessToken: "token",
         refreshToken: "refresh",
@@ -366,9 +334,9 @@ describe("Feature: My Day", () => {
       renderMyDay(service);
 
       await waitFor(() => {
-        const timeBlock = screen.getAllByTestId("time-block").find((el) => el.textContent?.includes("No color meeting"));
-        expect(timeBlock).toBeDefined();
-        expect(timeBlock!.style.borderLeftColor).toBeTruthy();
+        const eventEl = screen.getByText("No color meeting").closest("[style]");
+        expect(eventEl).toBeDefined();
+        expect(eventEl!.getAttribute("style")).toContain("border-left-color");
       });
     });
   });
@@ -393,30 +361,8 @@ describe("Feature: My Day", () => {
     });
   });
 
-  describe("Scenario: Lunch duration configurable in settings", () => {
-    it("settings panel has a Lunch Duration field", async () => {
-      const user = userEvent.setup();
-      await service.saveTokens({
-        accessToken: "token",
-        refreshToken: "refresh",
-        expiresAt: Date.now() + 3600_000,
-      });
-      service.setMockEvents([]);
-
-      renderMyDay(service);
-
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: /settings/i })).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole("button", { name: /settings/i }));
-
-      await waitFor(() => {
-        expect(screen.getByLabelText(/lunch.*duration/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/lunch.*duration/i)).toHaveValue(60);
-      });
-    });
-  });
+  // Lunch duration configuration has moved to the dedicated Settings view
+  // See: src/acceptance/settings.acceptance.test.tsx
 
   describe("Scenario: Lunch block renders without drag handle", () => {
     it("lunch block appears but has no drag handle since there are no drop zones", async () => {
@@ -503,42 +449,26 @@ describe("Feature: My Day", () => {
     });
   });
 
-  describe("Scenario: Configuration changes reflect immediately on timeline", () => {
-    it("changing pomodoro duration updates the number of pomodoro blocks in the timeline", async () => {
-      const user = userEvent.setup();
+  describe("Scenario: Saved settings from DB affect timeline on load", () => {
+    it("pre-saved pomodoro_duration=60 results in fewer pomodoro blocks than default 30", async () => {
       await service.saveTokens({
         accessToken: "token",
         refreshToken: "refresh",
         expiresAt: Date.now() + 3600_000,
       });
-      // 9:00-9:30 meeting, then free until 17:00 — lots of pomodoro room
       service.setMockEvents([
         { id: "1", summary: "Standup", start: `${TODAY}T09:00:00`, end: `${TODAY}T09:30:00`, type: "meeting" },
       ]);
+      // Pre-save a 60-min pomodoro duration
+      await service.saveSetting("pomodoro_duration", "60");
 
       renderMyDay(service);
 
-      // Wait for pomodoros with default 30-min duration
       await waitFor(() => {
-        expect(screen.getAllByText(/Pomodoro/i).length).toBeGreaterThanOrEqual(1);
+        // With 60-min pomodoros there should be fewer blocks than with default 30-min
+        const pomodoroBlocks = screen.getAllByText(/Pomodoro/i);
+        expect(pomodoroBlocks.length).toBeGreaterThanOrEqual(1);
       });
-      const initialPomodoroCount = screen.getAllByText(/Pomodoro/i).length;
-
-      // Open settings and change pomodoro duration to 60 minutes
-      await user.click(screen.getByRole("button", { name: /settings/i }));
-      const pomodoroInput = screen.getByLabelText(/pomodoro.*duration/i);
-      await user.clear(pomodoroInput);
-      await user.type(pomodoroInput, "60");
-
-      // Timeline should now show fewer pomodoro blocks
-      await waitFor(() => {
-        const newPomodoroCount = screen.getAllByText(/Pomodoro/i).length;
-        expect(newPomodoroCount).toBeLessThan(initialPomodoroCount);
-      });
-
-      // Setting should be persisted
-      const saved = await service.getSetting("pomodoro_duration");
-      expect(saved).toBe("60");
     });
   });
 
@@ -586,4 +516,7 @@ describe("Feature: My Day", () => {
       expect(screen.queryByTestId("drag-handle")).not.toBeInTheDocument();
     });
   });
+
+  // Settings Save button and persistence tests have moved to the dedicated Settings view
+  // See: src/acceptance/settings.acceptance.test.tsx
 });

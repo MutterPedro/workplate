@@ -52,8 +52,13 @@ function FreeBlock({ block }: { block: TimeBlock }) {
   );
 }
 
-function PomodoroBlock({ block }: { block: TimeBlock }) {
+function PomodoroBlock({ block, plateTasks, onTaskAssign, pomodoroIndex }: { block: TimeBlock; plateTasks?: string[]; onTaskAssign?: (pomodoroIndex: number, taskTitle: string) => void; pomodoroIndex: number }) {
   const [showSearch, setShowSearch] = useState(false);
+  const [searchText, setSearchText] = useState("");
+
+  const filteredTasks = (plateTasks ?? []).filter((t) =>
+    t.toLowerCase().includes(searchText.toLowerCase())
+  );
 
   return (
     <div className="flex items-center gap-3 rounded-lg border border-dashed border-amber-300 bg-amber-50 p-3">
@@ -66,11 +71,28 @@ function PomodoroBlock({ block }: { block: TimeBlock }) {
         {block.assignedTask ? (
           <div className="text-sm text-text mt-1">{block.assignedTask}</div>
         ) : showSearch ? (
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            className="mt-1 w-full text-sm border border-border rounded px-2 py-1"
-          />
+          <div>
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              className="mt-1 w-full text-sm border border-border rounded px-2 py-1"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+            {filteredTasks.length > 0 && (
+              <div className="mt-1">
+                {filteredTasks.map((task) => (
+                  <div
+                    key={task}
+                    className="cursor-pointer text-sm px-2 py-1 hover:bg-amber-100"
+                    onClick={() => onTaskAssign?.(pomodoroIndex, task)}
+                  >
+                    {task}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <button
             onClick={() => setShowSearch(true)}
@@ -84,7 +106,7 @@ function PomodoroBlock({ block }: { block: TimeBlock }) {
   );
 }
 
-function SortablePomodoroBlock({ block, id }: { block: TimeBlock; id: string }) {
+function SortablePomodoroBlock({ block, id, plateTasks, onTaskAssign, pomodoroIndex }: { block: TimeBlock; id: string; plateTasks?: string[]; onTaskAssign?: (pomodoroIndex: number, taskTitle: string) => void; pomodoroIndex: number }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -98,7 +120,7 @@ function SortablePomodoroBlock({ block, id }: { block: TimeBlock; id: string }) 
           &#x2630;
         </div>
       )}
-      <PomodoroBlock block={block} />
+      <PomodoroBlock block={block} plateTasks={plateTasks} onTaskAssign={onTaskAssign} pomodoroIndex={pomodoroIndex} />
     </div>
   );
 }
@@ -131,9 +153,11 @@ interface DayTimelineProps {
   blocks: TimeBlock[];
   onLunchMove?: (newLunchStart: string) => void;
   onTaskReorder?: (fromPomodoroIndex: number, toPomodoroIndex: number) => void;
+  plateTasks?: string[];
+  onTaskAssign?: (pomodoroIndex: number, taskTitle: string) => void;
 }
 
-export function DayTimeline({ blocks, onLunchMove, onTaskReorder }: DayTimelineProps) {
+export function DayTimeline({ blocks, onLunchMove, onTaskReorder, plateTasks, onTaskAssign }: DayTimelineProps) {
   if (blocks.length === 0) {
     return (
       <div className="text-center text-text-muted py-8">
@@ -184,18 +208,20 @@ export function DayTimeline({ blocks, onLunchMove, onTaskReorder }: DayTimelineP
         <div className="flex flex-col gap-2">
           {blocks.map((block, i) => {
             const height = computeBlockHeight(block.start, block.end);
-            const isEvent = block.kind === "event";
-            const borderColor = isEvent ? (block.event?.color ?? eventColor(undefined, block.event?.summary)) : undefined;
 
             const wrapperStyle: React.CSSProperties = {
               minHeight: `${height}px`,
             };
 
+            const pomodoroIndex = block.kind === "pomodoro"
+              ? blocks.slice(0, i).filter((b) => b.kind === "pomodoro").length
+              : 0;
+
             return (
               <div key={block.kind === "lunch" ? "lunch" : block.event?.id ?? `${block.kind}-${i}`} data-testid="time-block" style={wrapperStyle}>
                 {block.kind === "event" && <EventBlock block={block} />}
-                {block.kind === "pomodoro" && block.assignedTask && <SortablePomodoroBlock block={block} id={sortableIds[i]} />}
-                {block.kind === "pomodoro" && !block.assignedTask && <PomodoroBlock block={block} />}
+                {block.kind === "pomodoro" && block.assignedTask && <SortablePomodoroBlock block={block} id={sortableIds[i]} plateTasks={plateTasks} onTaskAssign={onTaskAssign} pomodoroIndex={pomodoroIndex} />}
+                {block.kind === "pomodoro" && !block.assignedTask && <PomodoroBlock block={block} plateTasks={plateTasks} onTaskAssign={onTaskAssign} pomodoroIndex={pomodoroIndex} />}
                 {block.kind === "rest" && <RestBlock block={block} />}
                 {block.kind === "lunch" && <LunchBlock block={block} />}
                 {block.kind === "free" && <FreeBlock block={block} />}

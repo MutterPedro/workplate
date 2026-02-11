@@ -18,9 +18,9 @@ export function classifyEvent(summary: string, attendeeCount: number): CalendarE
   return "other";
 }
 
-export function computeTimeBlocks(events: CalendarEvent[], dateStr: string): TimeBlock[] {
-  const dayStart = `${dateStr}T09:00:00`;
-  const dayEnd = `${dateStr}T17:00:00`;
+export function computeTimeBlocks(events: CalendarEvent[], dateStr: string, workHours?: { workStart: string; workEnd: string }): TimeBlock[] {
+  const dayStart = `${dateStr}T${workHours?.workStart ?? "09:00"}:00`;
+  const dayEnd = `${dateStr}T${workHours?.workEnd ?? "17:00"}:00`;
 
   const sorted = [...events].sort((a, b) => a.start.localeCompare(b.start));
 
@@ -105,6 +105,13 @@ export function computePomodoroBlocks(
         });
         cursor += restMs;
       } else {
+        if (remainingAfterPom > 0) {
+          result.push({
+            start: formatLocal(new Date(cursor)),
+            end: formatLocal(new Date(cursor + remainingAfterPom)),
+            kind: "free",
+          });
+        }
         break;
       }
     }

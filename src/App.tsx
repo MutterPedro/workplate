@@ -3,6 +3,7 @@ import { Shell } from "./components/layout/Shell";
 import { MyPlate } from "./views/MyPlate";
 import { Backlog } from "./views/Backlog";
 import { MyDay } from "./views/MyDay";
+import { Settings } from "./views/Settings";
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
         <Route path="/" element={<MyPlate />} />
         <Route path="/backlog" element={<Backlog />} />
         <Route path="/my-day" element={<MyDay />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
   );

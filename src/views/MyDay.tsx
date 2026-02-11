@@ -3,12 +3,12 @@ import { format, addDays, subDays, isToday, isTomorrow, isYesterday } from "date
 import { useCalendarService } from "../services/calendar-context";
 import { computePomodoroBlocks, insertLunchBlock, reorderTaskAssignments, moveLunchBlock } from "../services/calendar-service";
 import { useCalendar } from "../hooks/use-calendar";
+import { useTasks } from "../hooks/use-tasks";
 import { DayTimeline } from "../components/calendar/DayTimeline";
 import { CalendarConnect } from "../components/calendar/CalendarConnect";
 
 export function MyDay() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showSettings, setShowSettings] = useState(false);
   const dateLabel = isToday(selectedDate)
     ? format(selectedDate, "EEEE, MMMM d")
     : isTomorrow(selectedDate)
@@ -17,7 +17,10 @@ export function MyDay() {
         ? `Yesterday, ${format(selectedDate, "MMMM d")}`
         : format(selectedDate, "EEEE, MMMM d");
   const service = useCalendarService();
-  const { connected, loading, events, timeBlocks, error, connect, disconnect, refresh } = useCalendar(format(selectedDate, "yyyy-MM-dd"));
+  const [workStart, setWorkStart] = useState("09:00");
+  const [workEnd, setWorkEnd] = useState("17:00");
+  const workHours = useMemo(() => ({ workStart, workEnd }), [workStart, workEnd]);
+  const { connected, loading, events, timeBlocks, error, connect, disconnect, refresh } = useCalendar(format(selectedDate, "yyyy-MM-dd"), workHours);
 
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -26,6 +29,16 @@ export function MyDay() {
   const [lunchStart, setLunchStart] = useState("12:00");
   const [lunchDuration, setLunchDuration] = useState(60);
   const [taskAssignments, setTaskAssignments] = useState<Map<number, string>>(new Map());
+  const { tasks: plateTasks } = useTasks({ status: "plate" });
+  const plateTaskTitles = plateTasks.map(t => t.title);
+
+  const handleTaskAssign = useCallback((pomodoroIndex: number, taskTitle: string) => {
+    setTaskAssignments(prev => {
+      const next = new Map(prev);
+      next.set(pomodoroIndex, taskTitle);
+      return next;
+    });
+  }, []);
 
   // Full pipeline: events → time blocks → insert lunch → compute pomodoros → apply task assignments
   const finalBlocks = useMemo(() => {
@@ -51,12 +64,16 @@ export function MyDay() {
       if (secret) setClientSecret(secret);
       const pom = await service.getSetting("pomodoro_duration");
       const rest = await service.getSetting("rest_duration");
-      if (pom) setPomodoroDuration(parseInt(pom));
-      if (rest) setRestDuration(parseInt(rest));
+      if (pom) { setPomodoroDuration(parseInt(pom)); }
+      if (rest) { setRestDuration(parseInt(rest)); }
+      const ws = await service.getSetting("work_start");
+      const we = await service.getSetting("work_end");
+      if (ws) setWorkStart(ws);
+      if (we) setWorkEnd(we);
       const lunch = await service.getSetting("lunch_start");
       const lunchDur = await service.getSetting("lunch_duration");
       if (lunch) setLunchStart(lunch);
-      if (lunchDur) setLunchDuration(parseInt(lunchDur));
+      if (lunchDur) { setLunchDuration(parseInt(lunchDur)); }
     })();
   }, [service]);
 
@@ -139,39 +156,7 @@ export function MyDay() {
         >
           &rarr;
         </button>
-        <button
-          aria-label="Settings"
-          onClick={() => setShowSettings((s) => !s)}
-          className="ml-auto p-1 rounded hover:bg-surface-hover text-text-muted"
-        >
-          &#9881;
-        </button>
       </div>
-
-      {showSettings && (
-        <div className="mb-6 p-4 rounded bg-surface border border-border space-y-3">
-          <div className="flex items-center gap-4">
-            <label htmlFor="work-start" className="text-sm text-text">Work Start</label>
-            <input id="work-start" type="time" defaultValue="09:00" className="border border-border rounded px-2 py-1 text-sm" />
-          </div>
-          <div className="flex items-center gap-4">
-            <label htmlFor="work-end" className="text-sm text-text">Work End</label>
-            <input id="work-end" type="time" defaultValue="17:00" className="border border-border rounded px-2 py-1 text-sm" />
-          </div>
-          <div className="flex items-center gap-4">
-            <label htmlFor="pomodoro-duration" className="text-sm text-text">Pomodoro Duration</label>
-            <input id="pomodoro-duration" type="number" value={pomodoroDuration} onChange={(e) => { const v = parseInt(e.target.value) || 0; setPomodoroDuration(v); service.saveSetting("pomodoro_duration", String(v)); }} className="border border-border rounded px-2 py-1 text-sm w-20" />
-          </div>
-          <div className="flex items-center gap-4">
-            <label htmlFor="rest-duration" className="text-sm text-text">Rest Duration</label>
-            <input id="rest-duration" type="number" value={restDuration} onChange={(e) => { const v = parseInt(e.target.value) || 0; setRestDuration(v); service.saveSetting("rest_duration", String(v)); }} className="border border-border rounded px-2 py-1 text-sm w-20" />
-          </div>
-          <div className="flex items-center gap-4">
-            <label htmlFor="lunch-duration" className="text-sm text-text">Lunch Duration</label>
-            <input id="lunch-duration" type="number" value={lunchDuration} onChange={(e) => { const v = parseInt(e.target.value) || 0; setLunchDuration(v); service.saveSetting("lunch_duration", String(v)); }} className="border border-border rounded px-2 py-1 text-sm w-20" />
-          </div>
-        </div>
-      )}
 
       <div className="space-y-4">
         <CalendarConnect
@@ -200,6 +185,8 @@ export function MyDay() {
               blocks={finalBlocks}
               onLunchMove={handleLunchMove}
               onTaskReorder={handleTaskReorder}
+              plateTasks={plateTaskTitles}
+              onTaskAssign={handleTaskAssign}
             />
           </div>
         )}

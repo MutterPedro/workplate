@@ -6,6 +6,7 @@ const navItems = [
   { to: "/", label: "My Plate", icon: "◉" },
   { to: "/backlog", label: "Backlog", icon: "☰" },
   { to: "/my-day", label: "My Day", icon: "◎" },
+  { to: "/settings", label: "Settings", icon: "⚙" },
 ];
 
 export function Sidebar() {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { DayTimeline } from "./DayTimeline";
 import type { TimeBlock } from "../../types/calendar";
 
@@ -214,5 +215,105 @@ describe("DayTimeline", () => {
     ];
     render(<DayTimeline blocks={blocks} />);
     expect(screen.queryByTestId("drag-handle")).not.toBeInTheDocument();
+  });
+
+  it("shows plate tasks in a dropdown when Assign task is clicked", async () => {
+    const user = userEvent.setup();
+    const blocks: TimeBlock[] = [
+      { start: "2025-01-15T09:00:00", end: "2025-01-15T09:30:00", kind: "pomodoro" },
+    ];
+    const plateTasks = ["Review auth PR", "Write design doc", "Fix flaky test"];
+    render(<DayTimeline blocks={blocks} plateTasks={plateTasks} />);
+
+    await user.click(screen.getByRole("button", { name: /assign task/i }));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/search tasks/i)).toBeInTheDocument();
+      expect(screen.getByText("Review auth PR")).toBeInTheDocument();
+      expect(screen.getByText("Write design doc")).toBeInTheDocument();
+      expect(screen.getByText("Fix flaky test")).toBeInTheDocument();
+    });
+  });
+
+  it("filters plate tasks as user types in the search input", async () => {
+    const user = userEvent.setup();
+    const blocks: TimeBlock[] = [
+      { start: "2025-01-15T09:00:00", end: "2025-01-15T09:30:00", kind: "pomodoro" },
+    ];
+    const plateTasks = ["Review auth PR", "Write design doc", "Fix flaky test"];
+    render(<DayTimeline blocks={blocks} plateTasks={plateTasks} />);
+
+    await user.click(screen.getByRole("button", { name: /assign task/i }));
+    await user.type(screen.getByPlaceholderText(/search tasks/i), "design");
+
+    await waitFor(() => {
+      expect(screen.getByText("Write design doc")).toBeInTheDocument();
+      expect(screen.queryByText("Review auth PR")).not.toBeInTheDocument();
+      expect(screen.queryByText("Fix flaky test")).not.toBeInTheDocument();
+    });
+  });
+
+  it("calls onTaskAssign when a task is selected from the dropdown", async () => {
+    const user = userEvent.setup();
+    const blocks: TimeBlock[] = [
+      { start: "2025-01-15T09:00:00", end: "2025-01-15T09:30:00", kind: "pomodoro" },
+    ];
+    const plateTasks = ["Review auth PR", "Write design doc"];
+    const onTaskAssign = vi.fn();
+    render(<DayTimeline blocks={blocks} plateTasks={plateTasks} onTaskAssign={onTaskAssign} />);
+
+    await user.click(screen.getByRole("button", { name: /assign task/i }));
+    await user.click(screen.getByText("Write design doc"));
+
+    expect(onTaskAssign).toHaveBeenCalledWith(0, "Write design doc");
+  });
+
+  it("shows no dropdown items when plateTasks is empty", async () => {
+    const user = userEvent.setup();
+    const blocks: TimeBlock[] = [
+      { start: "2025-01-15T09:00:00", end: "2025-01-15T09:30:00", kind: "pomodoro" },
+    ];
+    render(<DayTimeline blocks={blocks} plateTasks={[]} />);
+
+    await user.click(screen.getByRole("button", { name: /assign task/i }));
+    expect(screen.getByPlaceholderText(/search tasks/i)).toBeInTheDocument();
+    // No task items should appear
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("passes correct pomodoroIndex for second pomodoro block", async () => {
+    const user = userEvent.setup();
+    const blocks: TimeBlock[] = [
+      { start: "2025-01-15T09:00:00", end: "2025-01-15T09:30:00", kind: "pomodoro" },
+      { start: "2025-01-15T09:30:00", end: "2025-01-15T09:35:00", kind: "rest" },
+      { start: "2025-01-15T09:35:00", end: "2025-01-15T10:05:00", kind: "pomodoro" },
+    ];
+    const plateTasks = ["Task A"];
+    const onTaskAssign = vi.fn();
+    render(<DayTimeline blocks={blocks} plateTasks={plateTasks} onTaskAssign={onTaskAssign} />);
+
+    const assignButtons = screen.getAllByRole("button", { name: /assign task/i });
+    // Click the second pomodoro's assign button
+    await user.click(assignButtons[1]);
+    await user.click(screen.getByText("Task A"));
+
+    expect(onTaskAssign).toHaveBeenCalledWith(1, "Task A");
+  });
+
+  it("search filtering is case-insensitive", async () => {
+    const user = userEvent.setup();
+    const blocks: TimeBlock[] = [
+      { start: "2025-01-15T09:00:00", end: "2025-01-15T09:30:00", kind: "pomodoro" },
+    ];
+    const plateTasks = ["Review Auth PR", "Write Design Doc"];
+    render(<DayTimeline blocks={blocks} plateTasks={plateTasks} />);
+
+    await user.click(screen.getByRole("button", { name: /assign task/i }));
+    await user.type(screen.getByPlaceholderText(/search tasks/i), "AUTH");
+
+    await waitFor(() => {
+      expect(screen.getByText("Review Auth PR")).toBeInTheDocument();
+      expect(screen.queryByText("Write Design Doc")).not.toBeInTheDocument();
+    });
   });
 });

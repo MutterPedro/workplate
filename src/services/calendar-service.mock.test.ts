@@ -209,6 +209,20 @@ describe("computeTimeBlocks", () => {
     expect(blocks).toHaveLength(1);
     expect(blocks[0].kind).toBe("event");
   });
+
+  it("uses custom work hours when provided", () => {
+    const blocks = computeTimeBlocks([], "2025-01-15", { workStart: "10:00", workEnd: "18:00" });
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].kind).toBe("free");
+    expect(blocks[0].start).toBe("2025-01-15T10:00:00");
+    expect(blocks[0].end).toBe("2025-01-15T18:00:00");
+  });
+
+  it("defaults to 09:00-17:00 when work hours not provided", () => {
+    const blocks = computeTimeBlocks([], "2025-01-15");
+    expect(blocks[0].start).toBe("2025-01-15T09:00:00");
+    expect(blocks[0].end).toBe("2025-01-15T17:00:00");
+  });
 });
 
 describe("computeBlockHeight", () => {
